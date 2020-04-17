@@ -46,7 +46,7 @@ Tree read_NEWICK(char* input) {
 		}
 		else {
 			//liczba dwucyfrowa
-			if (input[i] == '1' && input[i + 1] > 48 && input[i + 1] < 58) {
+			if (input[i] == '1' && input[i + 1] >= 48 && input[i + 1] < 58) {
 				tmp_tree->value = 10 + input[i + 1] - 48;
 				i++;
 			} 
