@@ -3,7 +3,7 @@
 #include <iostream>
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
+#include <iomanip>
 
 struct Tree {
 	int value;					//jesli dany wierzcholek jest lisciem, to tu jest jego wartosc, jesli nie jest lisciem, to jest to NULL
@@ -42,10 +42,10 @@ Tree* alloc() {
 	return (Tree*)malloc(sizeof(Tree));
 }
 
-Tree read_NEWICK(char* input, int& internal_vertices, Tree* order) {
+Tree read_NEWICK(char* input, int& internal_vertices, Tree* &order) {
 	Tree* tmp = alloc();
 	init_Tree(tmp);
-	order = (Tree*)malloc(1*sizeof(Tree));
+	order = (Tree*)malloc(sizeof(Tree));
 	internal_vertices = 0;
 
 	int i = 0;
@@ -55,10 +55,9 @@ Tree read_NEWICK(char* input, int& internal_vertices, Tree* order) {
 			tmp->son = alloc();
 			init_Tree(tmp->son);
 			order[internal_vertices - 1] = *tmp;
-			if (Tree* real = (Tree*)realloc(order, internal_vertices + 1)) {
+			if (Tree* real = (Tree*)realloc(order, (internal_vertices + 1)* sizeof(Tree))) {
 				order = real;
 			}
-			//order = (Tree**)realloc(order, internal_vertices + 1);
 			tmp->son->parent = tmp;
 			tmp = tmp->son;
 		}
@@ -85,6 +84,43 @@ Tree read_NEWICK(char* input, int& internal_vertices, Tree* order) {
 	} while (input[i] != ';');
 	
 	return *tmp;
+}
+
+int** alloc_table(int columns, int rows) {
+	int** arr = (int**)malloc(columns * sizeof(int*));
+	for (int t2 = 0; t2 < columns; t2++) {
+		arr[t2] = (int*)malloc(rows * sizeof(int));
+	}
+	return arr;
+}
+
+//wypelnianie drugiej cwiartki
+void check_for_son(int* row, int size, Tree* tree) {
+	Tree* tmp = alloc();
+	init_Tree(tmp);
+	tmp = tree->son;
+	while (tmp != NULL)
+	{
+		row[tmp->value - 1] = 1;
+		tmp = tmp->brother;
+	}
+}
+
+//tutaj bede musial poprawic, bo ta funkcja powinna dostawac cala tabele, a nie tyle rzad, zeby moc sie swobodnie odwolywac do innych rzedow
+void check_leafes(int* row, int size, Tree* node) {
+	Tree* tmp = alloc();
+	init_Tree(tmp);
+	tmp = node->son;
+
+	while (tmp != NULL) {
+		while (tmp->value != NULL) {
+			row[tmp->value - 1] = 1;
+			tmp = tmp->brother;
+		}
+
+		//jesli tmp->value to NULL, to trzeba zajrzec do odpowiadajacego wiersza w tabeli
+	}
+	//jesli value to NULL, to zajrzyj 
 }
 
 int main() {
@@ -126,7 +162,7 @@ int main() {
 		arr[i].tree = read_NEWICK(input[i], arr[i].internal_vert, arr[i].order);
 	}
 
-	//tu sie zacznie dziac tabela
+	//petla robiaca porownanie kazdy z kazdym
 	int comp = 1;
 	for (int i = 0; comp < size; i++) {
 		for (int j = 1; j + comp <= size; j++) {
@@ -134,16 +170,32 @@ int main() {
 			int t1_size = arr[comp - 1].internal_vert + 10;
 			int t2_size = arr[comp + j - 1].internal_vert + 10;
 
-			int** main_arr = (int**)malloc(t2_size * sizeof(int*));
+			int** main_arr = alloc_table(t2_size, t1_size);
+
+			//wypelnienie tabelki - I cwiartka
+			for (int t2 = 0; t2 < t2_size; t2++) {
+				for (int t1 = 0; t1 < t1_size; t1++) {
+					if (t2 == t1) {
+						main_arr[t2][t1] = 1;
+					}
+					else {
+						main_arr[t2][t1] = 0;
+					}
+				}
+			}
+
 
 			//wyswietlanie tabelki
-			for (int t2 = 1; t2 <= t2_size; t2++) {
-				main_arr[t2-1] = (int*)malloc(t1_size * sizeof(int));
-				for (int t1 = 1; t1 <= t1_size; t1++) {
-					if (t2 == 1) std::cout << t1 << ' ';
-					if (t1 == 1) std::cout << t2 << ' ';
+			for (int t2 = 0; t2 <= t2_size; t2++) {
+				for (int t1 = 0; t1 <= t1_size; t1++) {
+					if (t2 == 0 && t1 == 0) std::cout << std::setw(2) << 0 << ' ';
+					if (t2 == 0 && t1 != 0) std::cout << std::setw(2) << t1 << ' ';
+					if (t1 == 0 && t2 != 0) std::cout << std::setw(2) << t2 << ' ';
+					if (t1 >= 1 && t2 >= 1 && t1 <11 && t2 <11) {
+						std::cout << std::setw(2) << main_arr[t2 - 1][t1 - 1] << ' ';
+					}
+					
 				}
-				
 				std::cout << '\n';
 			}
 			for (int f = 0; f < t2_size; f++) {
