@@ -3,9 +3,13 @@
 #include <iostream>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
+
+//tylko na potrzeby prezentacji tabelki - do usuniecia
 #include <iomanip>
 
 struct Tree {
+	short id;					//mala wartosc do samego zapisywania numeru wierzcholka, w kolejnosci dodawania
 	int value;					//jesli dany wierzcholek jest lisciem, to tu jest jego wartosc, jesli nie jest lisciem, to jest to NULL
 	Tree* parent;				
 	Tree* son;
@@ -19,16 +23,12 @@ struct Root {
 	int inner;
 };
 
-struct Collector {
-	Tree tree;
-	Collector* next;
-};
-
-void init_Tree(Tree* root) {
-	root->value = NULL;
-	root->parent = NULL;
-	root->brother = NULL;
-	root->son = NULL;
+void init_Tree(Tree* tree) {
+	tree->id = NULL;
+	tree->value = NULL;
+	tree->parent = NULL;
+	tree->brother = NULL;
+	tree->son = NULL;
 }
 
 void init_Root(Root* root) {
@@ -55,6 +55,7 @@ Tree read_NEWICK(char* input, int& internal_vertices, Tree* &order) {
 			tmp->son = alloc();
 			init_Tree(tmp->son);
 			order[internal_vertices - 1] = *tmp;
+			tmp->id = 10 + internal_vertices;
 			if (Tree* real = (Tree*)realloc(order, (internal_vertices + 1)* sizeof(Tree))) {
 				order = real;
 			}
@@ -94,6 +95,29 @@ int** alloc_table(int columns, int rows) {
 	return arr;
 }
 
+//inicjuje cala tablice zerami
+void init_table(int** arr, int columns, int rows) {
+	for (int t2 = 0; t2 < columns; t2++) {
+		for (int t1 = 0; t1 < rows; t1++) {
+			arr[t2][t1] = 0;
+		}
+	}
+}
+
+//wypelnia pierwsza cwiartke dla lisci
+void init_leaves(int** arr, int columns, int rows) {
+	for (int t2 = 0; t2 < columns; t2++) {
+		for (int t1 = 0; t1 < rows; t1++) {
+			if (t2 == t1 && t1 < 10 && t2 < 10) {
+				arr[t2][t1] = 1;
+			}
+			else {
+				arr[t2][t1] = 0;
+			}
+		}
+	}
+}
+
 //wypelnianie drugiej cwiartki
 void check_for_son(int* row, int size, Tree* tree) {
 	Tree* tmp = alloc();
@@ -106,21 +130,32 @@ void check_for_son(int* row, int size, Tree* tree) {
 	}
 }
 
-//tutaj bede musial poprawic, bo ta funkcja powinna dostawac cala tabele, a nie tyle rzad, zeby moc sie swobodnie odwolywac do innych rzedow
-void check_leafes(int* row, int size, Tree* node) {
+//nie wiem czy to dobrze dziala z tymi wskaznikami szalonymi
+void check_leaves(int** arr, int size, int index, Tree* node) {
 	Tree* tmp = alloc();
+	Tree* tmp2 = alloc();
 	init_Tree(tmp);
+	init_Tree(tmp2);
 	tmp = node->son;
+	tmp2 = node;
 
 	while (tmp != NULL) {
-		while (tmp->value != NULL) {
-			row[tmp->value - 1] = 1;
-			tmp = tmp->brother;
-		}
 
+		if (tmp->value != NULL) {
+			arr[index][tmp->value - 1] = 1;
+		}
+		else if (tmp->value == NULL) {
+			for (int i = 0; i < size; i++) {
+				arr[index][i] += arr[tmp->id - 1][i];
+			}
+		}
+		tmp = tmp->brother;
 		//jesli tmp->value to NULL, to trzeba zajrzec do odpowiadajacego wiersza w tabeli
 	}
 	//jesli value to NULL, to zajrzyj 
+	node = tmp2;
+	free(tmp2);
+	free(tmp);
 }
 
 int main() {
@@ -171,18 +206,12 @@ int main() {
 			int t2_size = arr[comp + j - 1].internal_vert + 10;
 
 			int** main_arr = alloc_table(t2_size, t1_size);
+			init_table(main_arr, t2_size, t1_size);
 
 			//wypelnienie tabelki - I cwiartka
-			for (int t2 = 0; t2 < t2_size; t2++) {
-				for (int t1 = 0; t1 < t1_size; t1++) {
-					if (t2 == t1) {
-						main_arr[t2][t1] = 1;
-					}
-					else {
-						main_arr[t2][t1] = 0;
-					}
-				}
-			}
+			init_leaves(main_arr, t2_size, t1_size);
+			
+
 
 
 			//wyswietlanie tabelki
@@ -191,10 +220,9 @@ int main() {
 					if (t2 == 0 && t1 == 0) std::cout << std::setw(2) << 0 << ' ';
 					if (t2 == 0 && t1 != 0) std::cout << std::setw(2) << t1 << ' ';
 					if (t1 == 0 && t2 != 0) std::cout << std::setw(2) << t2 << ' ';
-					if (t1 >= 1 && t2 >= 1 && t1 <11 && t2 <11) {
+					if (t1 >= 1 && t2 >= 1 /*&& t1 <11 && t2 <11*/) {
 						std::cout << std::setw(2) << main_arr[t2 - 1][t1 - 1] << ' ';
 					}
-					
 				}
 				std::cout << '\n';
 			}
