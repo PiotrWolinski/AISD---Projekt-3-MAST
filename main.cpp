@@ -17,8 +17,8 @@ struct Tree {
 };
 
 struct Root {
-	Tree tree;					//zwykly korzen, ktory bedzie zaczynal drzewo
-	Tree* order;				//tablica, ktora bedzie przetrzymywala wezly i liscie w kolejnosci dodania
+	Tree* tree;					//zwykly korzen, ktory bedzie zaczynal drzewo
+	Tree** order;				//tablica, ktora bedzie przetrzymywala wezly i liscie w kolejnosci dodania
 	int internal_vert;			//zmienna przechowujaca ilosc wierzcholkow wewnetrznych
 	int inner;
 };
@@ -32,7 +32,7 @@ void init_Tree(Tree* tree) {
 }
 
 void init_Root(Root* root) {
-	init_Tree(&root->tree);
+	init_Tree(root->tree);
 	root->order = NULL;
 	root->internal_vert = NULL;
 	root->inner = NULL;
@@ -42,10 +42,10 @@ Tree* alloc() {
 	return (Tree*)malloc(sizeof(Tree));
 }
 
-Tree read_NEWICK(char* input, int& internal_vertices, Tree* &order) {
+Tree* read_NEWICK(char* input, int& internal_vertices, Tree** &order) {
 	Tree* tmp = alloc();
 	init_Tree(tmp);
-	order = (Tree*)malloc(sizeof(Tree));
+	order = (Tree**)malloc(sizeof(Tree*));
 	internal_vertices = 0;
 
 	int i = 0;
@@ -54,9 +54,9 @@ Tree read_NEWICK(char* input, int& internal_vertices, Tree* &order) {
 			++internal_vertices;
 			tmp->son = alloc();
 			init_Tree(tmp->son);
-			order[internal_vertices - 1] = *tmp;
+			order[internal_vertices - 1] = tmp;
 			tmp->id = 10 + internal_vertices;
-			if (Tree* real = (Tree*)realloc(order, (internal_vertices + 1)* sizeof(Tree))) {
+			if (Tree** real = (Tree**)realloc(order, (internal_vertices + 1)* sizeof(Tree*))) {
 				order = real;
 			}
 			tmp->son->parent = tmp;
@@ -84,7 +84,7 @@ Tree read_NEWICK(char* input, int& internal_vertices, Tree* &order) {
 		i++;
 	} while (input[i] != ';');
 	
-	return *tmp;
+	return tmp;
 }
 
 int** alloc_table(int columns, int rows) {
@@ -118,26 +118,11 @@ void init_leaves(int** arr, int columns, int rows) {
 	}
 }
 
-//wypelnianie drugiej cwiartki
-void check_for_son(int* row, int size, Tree* tree) {
-	Tree* tmp = alloc();
-	init_Tree(tmp);
-	tmp = tree->son;
-	while (tmp != NULL)
-	{
-		row[tmp->value - 1] = 1;
-		tmp = tmp->brother;
-	}
-}
 
-//nie wiem czy to dobrze dziala z tymi wskaznikami szalonymi
-void check_leaves(int** arr, int size, int index, Tree* node) {
-	Tree* tmp = alloc();
-	Tree* tmp2 = alloc();
-	init_Tree(tmp);
-	init_Tree(tmp2);
-	tmp = node->son;
-	tmp2 = node;
+//sprawdzanie czy konkretny wierzcholek zawiera okreslone liscie
+void check_leaves_vert(int** arr, int index, Tree* &node) {
+	Tree* tmp = node->son;
+	Tree* tmp2 = node;
 
 	while (tmp != NULL) {
 
@@ -145,7 +130,7 @@ void check_leaves(int** arr, int size, int index, Tree* node) {
 			arr[index][tmp->value - 1] = 1;
 		}
 		else if (tmp->value == NULL) {
-			for (int i = 0; i < size; i++) {
+			for (int i = 0; i < 10; i++) {
 				arr[index][i] += arr[tmp->id - 1][i];
 			}
 		}
@@ -154,8 +139,42 @@ void check_leaves(int** arr, int size, int index, Tree* node) {
 	}
 	//jesli value to NULL, to zajrzyj 
 	node = tmp2;
-	free(tmp2);
-	free(tmp);
+}
+
+//sprawdzanie czy konkretny wierzcholek zawiera okreslone liscie
+void check_leaves_hori(int** arr, int index, Tree*& node) {
+	Tree* tmp = node->son;
+	Tree* tmp2 = node;
+
+	while (tmp != NULL) {
+
+		if (tmp->value != NULL) {
+			arr[tmp->value - 1][index] = 1;
+		}
+		else if (tmp->value == NULL) {
+			for (int i = 0; i < 10; i++) {
+				arr[i][index] += arr[i][tmp->id - 1];
+			}
+		}
+		tmp = tmp->brother;
+		//jesli tmp->value to NULL, to trzeba zajrzec do odpowiadajacego wiersza w tabeli
+	}
+	//jesli value to NULL, to zajrzyj 
+	node = tmp2;
+}
+
+//funkcja sprawdza czy wierzcholki danego drzewa zawieraja konkretne liscie
+void check_vert(Tree** order, int** arr, int size_y) {
+	for (int i = size_y - 1; i >= 10; i--) {
+		check_leaves_vert(arr, i, order[i - 10]);
+	}
+}
+
+//funkcja sprawdza czy wierzcholki danego drzewa zawieraja konkretne liscie
+void check_hori(Tree** order, int** arr, int size_x) {
+	for (int i = size_x - 1; i >= 10; i--) {
+		check_leaves_hori(arr, i, order[i - 10]);
+	}
 }
 
 int main() {
@@ -164,35 +183,36 @@ int main() {
 
 	Root* arr = (Root*)malloc(size * sizeof(Root));
 	char** input = (char**)malloc(size * sizeof(char*));
-	int i = 0;
+	int x = 0;
 	int blank = getchar();
 	do
 	{
 		unsigned int arr_size = 1;
-		input[i] = (char*)malloc(sizeof(char));
+		input[x] = (char*)malloc(sizeof(char));
 
-		if (input[i] != NULL)
+		if (input[x] != NULL)
 		{
 			char q;
 			unsigned int j = 0;
 			while ((q = getchar()) != '\n')
 			{
-				input[i][j++] = q;
+				input[x][j++] = q;
 				if (j == arr_size)
 				{
 					arr_size = j + 1;
-					if (char* tmp = (char*)realloc(input[i], arr_size))
+					if (char* tmp = (char*)realloc(input[x], arr_size))
 					{
-						input[i] = tmp;
+						input[x] = tmp;
 					}
 				}
 			}
-			input[i][j] = '\0';
-			i++;
+			input[x][j] = '\0';
+			x++;
 		}
-	} while (i < size);
+	} while (x < size);
 
 	for (int i = 0; i < size; i++) {
+		arr[i].tree = alloc();
 		init_Root(&arr[i]);
 		arr[i].tree = read_NEWICK(input[i], arr[i].internal_vert, arr[i].order);
 	}
@@ -202,21 +222,22 @@ int main() {
 	for (int i = 0; comp < size; i++) {
 		for (int j = 1; j + comp <= size; j++) {
 			//w tym miejscu comp i comp+j maja odpowiednie wartosci, zeby je zaczac ze soba porownywac
-			int t1_size = arr[comp - 1].internal_vert + 10;
-			int t2_size = arr[comp + j - 1].internal_vert + 10;
+			int size_Y = arr[comp - 1].internal_vert + 10;
+			int size_X = arr[comp + j - 1].internal_vert + 10;
 
-			int** main_arr = alloc_table(t2_size, t1_size);
-			init_table(main_arr, t2_size, t1_size);
+			int** main_arr = alloc_table(size_Y, size_X);
+			init_table(main_arr, size_Y, size_X);
 
 			//wypelnienie tabelki - I cwiartka
-			init_leaves(main_arr, t2_size, t1_size);
+			init_leaves(main_arr, size_Y, size_X);
 			
+			check_vert(arr[comp - 1].order, main_arr, size_Y);
 
-
+			check_hori(arr[comp + j - 1].order, main_arr, size_X);
 
 			//wyswietlanie tabelki
-			for (int t2 = 0; t2 <= t2_size; t2++) {
-				for (int t1 = 0; t1 <= t1_size; t1++) {
+			for (int t2 = 0; t2 <= size_Y; t2++) {
+				for (int t1 = 0; t1 <= size_X; t1++) {
 					if (t2 == 0 && t1 == 0) std::cout << std::setw(2) << 0 << ' ';
 					if (t2 == 0 && t1 != 0) std::cout << std::setw(2) << t1 << ' ';
 					if (t1 == 0 && t2 != 0) std::cout << std::setw(2) << t2 << ' ';
@@ -226,7 +247,7 @@ int main() {
 				}
 				std::cout << '\n';
 			}
-			for (int f = 0; f < t2_size; f++) {
+			for (int f = 0; f < size_Y; f++) {
 				free(main_arr[f]);
 			}
 			std::cout << comp << '-' << comp + j << '\n';
@@ -234,13 +255,6 @@ int main() {
 		comp++;
 	}
 	
-
-
-
-
-
-
-
 
 
 
