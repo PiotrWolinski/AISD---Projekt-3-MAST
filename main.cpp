@@ -2,8 +2,6 @@
 
 #include <iostream>
 #include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
 
 //tylko na potrzeby prezentacji tabelki - do usuniecia
 #include <iomanip>
@@ -11,7 +9,7 @@
 #define LEAVES 10
 
 struct Tree {
-	short id;					//mala wartosc do samego zapisywania numeru wierzcholka, w kolejnosci dodawania
+	int id;					//mala wartosc do samego zapisywania numeru wierzcholka, w kolejnosci dodawania
 	int value;					//jesli dany wierzcholek jest lisciem, to tu jest jego wartosc, jesli nie jest lisciem, to jest to NULL
 	Tree* parent;				
 	Tree* son;
@@ -97,29 +95,20 @@ int** alloc_table(int columns, int rows) {
 	return arr;
 }
 
-//inicjuje cala tablice zerami
+//poczatkowe wypelnienie tablicy
 void init_table(int** arr, int columns, int rows) {
-	for (int t2 = 0; t2 < columns; t2++) {
-		for (int t1 = 0; t1 < rows; t1++) {
-			arr[t2][t1] = 0;
-		}
-	}
-}
-
-//wypelnia pierwsza cwiartke dla lisci
-void init_leaves(int** arr, int columns, int rows) {
 	for (int t2 = 0; t2 < columns; t2++) {
 		for (int t1 = 0; t1 < rows; t1++) {
 			if (t2 == t1 && t1 < 10 && t2 < 10) {
 				arr[t2][t1] = 1;
 			}
-			else {
+			else
+			{
 				arr[t2][t1] = 0;
 			}
 		}
 	}
 }
-
 
 //sprawdzanie czy konkretny wierzcholek zawiera okreslone liscie
 void check_leaves_vert(int** arr, int index, Tree* &node) {
@@ -131,7 +120,7 @@ void check_leaves_vert(int** arr, int index, Tree* &node) {
 		if (tmp->value != NULL) {
 			arr[index][tmp->value - 1] = 1;
 		}
-		else if (tmp->value == NULL) {
+		else {
 			for (int i = 0; i < 10; i++) {
 				arr[index][i] += arr[tmp->id - 1][i];
 			}
@@ -153,7 +142,7 @@ void check_leaves_hori(int** arr, int index, Tree*& node) {
 		if (tmp->value != NULL) {
 			arr[tmp->value - 1][index] = 1;
 		}
-		else if (tmp->value == NULL) {
+		else {
 			for (int i = 0; i < 10; i++) {
 				arr[i][index] += arr[i][tmp->id - 1];
 			}
@@ -227,15 +216,6 @@ int compare(int** arr, Tree* node1, Tree* node2) {
 	}
 }
 
-int check_id(int* arr, int size, int value) {
-	for (int i = 0; i < size; i++) {
-		if (arr[i] == value) {
-			return 0;
-		}
-	}
-	return 1;
-}
-
 void exclude_row(int** arr, int row, int size) {
 	for (int i = 0; i < size; i++) {
 		arr[row][i] = 1;
@@ -292,6 +272,7 @@ int compare_inner(int** arr, Tree* order1, Tree* order2) {
 
 	int** tmp_arr = (int**)malloc(size_Y * sizeof(int*));
 	int** pom_arr = (int**)malloc(size_Y * sizeof(int*));
+
 	for (int i = 0; i < size_Y; i++) {
 		tmp_arr[i] = (int*)malloc(size_X * sizeof(int));
 		pom_arr[i] = (int*)malloc(size_X * sizeof(int));
@@ -306,11 +287,10 @@ int compare_inner(int** arr, Tree* order1, Tree* order2) {
 
 	//szukanie sumy maksymalnych elementow z danych rzedow/kolumn
 	int max = 0;
+	int smaller = (size_X < size_Y) ? size_X : size_Y;
 
-	for (int i = 0; i < size_Y; i++) {
-		for (int j = 0; j < size_X; j++) {
-			max += find_max(tmp_arr, size_Y, size_X, pom_arr);
-		}
+	for (int i = 0; i < smaller; i++) {
+		max += find_max(tmp_arr, size_Y, size_X, pom_arr);
 	}
 
 
@@ -330,6 +310,17 @@ int compare_inner(int** arr, Tree* order1, Tree* order2) {
 			max = pom_t2[i];
 		}
 	}
+
+	for (int i = 0; i < size_Y; i++) {
+			free(tmp_arr[i]);
+			free(pom_arr[i]);	
+	}
+	free(tmp_arr);
+	free(pom_arr);
+	free(pom_t1);
+	free(pom_t2);
+	free(t1_sons);
+	free(t2_sons);
 	return max;
 }
 
@@ -344,7 +335,7 @@ void check_inner(Tree** order1, Tree** order2, int** arr, int size_y, int size_x
 
 int main() {
 	int size;
-	std::cin >> size;
+	scanf("%d", &size);
 
 	Root* arr = (Root*)malloc(size * sizeof(Root));
 	char** input = (char**)malloc(size * sizeof(char*));
@@ -352,20 +343,20 @@ int main() {
 	int blank = getchar();
 	do
 	{
-		unsigned int arr_size = 1;
-		input[x] = (char*)malloc(sizeof(char));
+		int arr_size = 1;
+		input[x] = (char*)malloc(arr_size*sizeof(char));
 
 		if (input[x] != NULL)
 		{
 			char q;
-			unsigned int j = 0;
+			int j = 0;
 			while ((q = getchar()) != '\n')
 			{
 				input[x][j++] = q;
 				if (j == arr_size)
 				{
-					arr_size = j + 1;
-					if (char* tmp = (char*)realloc(input[x], arr_size))
+					arr_size += j;
+					if (char* tmp = (char*)realloc(input[x], arr_size*sizeof(char)))
 					{
 						input[x] = tmp;
 					}
@@ -380,7 +371,9 @@ int main() {
 		arr[i].tree = alloc();
 		init_Root(&arr[i]);
 		arr[i].tree = read_NEWICK(input[i], arr[i].internal_vert, arr[i].order);
+		free(input[i]);
 	}
+	free(input);
 
 	//petla robiaca porownanie kazdy z kazdym
 	int comp = 1;
@@ -392,15 +385,10 @@ int main() {
 
 			int** main_arr = alloc_table(size_Y, size_X);
 			init_table(main_arr, size_Y, size_X);
-
-			//wypelnienie tabelki - I cwiartka
-			init_leaves(main_arr, size_Y, size_X);
 			
 			check_vert(arr[comp - 1].order, main_arr, size_Y);
 
 			check_hori(arr[comp + j - 1].order, main_arr, size_X);
-
-			int t = count_sons(arr[comp - 1].tree);
 
 			check_inner(arr[comp - 1].order, arr[comp + j - 1].order, main_arr, size_Y, size_X);
 
@@ -418,26 +406,24 @@ int main() {
 			}*/
 
 			int max = 0;
-			for (int m = 10; m < size_Y; m++) {
-				for (int n = 10; m < size_X; n++) {
-					if (main_arr[m][n] > max) {
-						max = main_arr[m][n];
+			for (int t2 = 10; t2 <= size_Y; t2++) {
+				for (int t1 = 10; t1 <= size_X; t1++) {
+					if (main_arr[t2 - 1][t1 - 1] > max) {
+						max = main_arr[t2 - 1][t1 - 1];
 					}
 				}
 			}
 
-			std::cout << max;
+			printf("%d\n", 10 - max);
 
 			for (int f = 0; f < size_Y; f++) {
 				free(main_arr[f]);
 			}
-			//std::cout << comp << '-' << comp + j << '\n';
+			/*std::cout << comp << '-' << comp + j << '\n';*/
+			free(main_arr);
 		}
 		comp++;
 	}
 	
-	for (int i = 0; i < size; i++) {
-		free(input[i]);
-	}
 	return 0;
 }
