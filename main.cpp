@@ -8,6 +8,8 @@
 //tylko na potrzeby prezentacji tabelki - do usuniecia
 #include <iomanip>
 
+#define LEAVES 10
+
 struct Tree {
 	short id;					//mala wartosc do samego zapisywania numeru wierzcholka, w kolejnosci dodawania
 	int value;					//jesli dany wierzcholek jest lisciem, to tu jest jego wartosc, jesli nie jest lisciem, to jest to NULL
@@ -163,6 +165,7 @@ void check_leaves_hori(int** arr, int index, Tree*& node) {
 	node = tmp2;
 }
 
+
 //funkcja sprawdza czy wierzcholki danego drzewa zawieraja konkretne liscie
 void check_vert(Tree** order, int** arr, int size_y) {
 	for (int i = size_y - 1; i >= 10; i--) {
@@ -170,10 +173,172 @@ void check_vert(Tree** order, int** arr, int size_y) {
 	}
 }
 
+//sprawdzam czy konkretny lisc znajduje sie w konkrentym wierzcholku
+int check_leaf(int** arr, int index, int leaf) {
+	if (arr[index - 1][leaf - 1] == 1) {
+		return 1;
+	}
+	else {
+		return 0;
+	}
+}
+
 //funkcja sprawdza czy wierzcholki danego drzewa zawieraja konkretne liscie
 void check_hori(Tree** order, int** arr, int size_x) {
 	for (int i = size_x - 1; i >= 10; i--) {
 		check_leaves_hori(arr, i, order[i - 10]);
+	}
+}
+
+//zwraca liczbe synow (tylko bezposrednich) danego wierzcholka
+int count_sons(Tree* tree) {
+	Tree* tmp = tree->son;
+	int counter = 0;
+
+	while (tmp != NULL) {
+		counter++;
+		tmp = tmp->brother;
+	}
+	return counter;
+}
+
+//sprawdza dwa podane wierzcholki
+int compare(int** arr, Tree* node1, Tree* node2) {
+	//obydwa wierzcholki to liscie
+	if (!node1->id && !node2->id) {
+		if (node1->value == node2->value) {
+			return 1;
+		}
+		else {
+			return 0;
+		}
+	}
+	//wierzcholek 1 to rozgalezienie, a drugi to lisc, wiec sprawdzam czy ten wierzcholek zawiera tego liscia
+	else if (node1->id > 10 && !node2->id) {
+		return check_leaf(arr, node1->id, node2->value);
+	}
+	//wierzcholek 2 to rozgalezienie, a pierwszy to lisc, wiec sprawdzam czy ten wierzcholek zawiera tego liscia
+	else if (!node1->id && node2->id > 10) {
+		return check_leaf(arr, node1->value, node2->id);
+	}
+	//obydwa wierzcholki to rozgalezienia, wiec zagladam do tabelki w czwartej cwiartce
+	else {
+		return arr[node1->id - 1][node2->id - 1];
+	}
+}
+
+int check_id(int* arr, int size, int value) {
+	for (int i = 0; i < size; i++) {
+		if (arr[i] == value) {
+			return 0;
+		}
+	}
+	return 1;
+}
+
+void exclude_row(int** arr, int row, int size) {
+	for (int i = 0; i < size; i++) {
+		arr[row][i] = 1;
+	}
+}
+
+void exclude_column(int** arr, int column, int size) {
+	for (int i = 0; i < size; i++) {
+		arr[i][column] = 1;
+	}
+}
+
+int find_max(int** arr, int size_Y, int size_X, int** pom) {
+	int max = 0;
+	int max_x = 0;
+	int max_y = 0;
+	for (int i = 0; i < size_Y; i++) {
+		for (int j = 0; j < size_X; j++) {
+			if (arr[i][j] > max && !pom[i][j]) {
+				max = arr[i][j];
+				max_y = i;
+				max_x = j;
+			}
+		}
+	}
+
+	exclude_column(pom, max_x, size_Y);
+	exclude_row(pom, max_y, size_X);
+	return max;
+}
+
+int compare_inner(int** arr, Tree* order1, Tree* order2) {
+	int size_Y = count_sons(order1);
+	int size_X = count_sons(order2);
+
+	Tree** t1_sons = (Tree**)malloc(size_Y * sizeof(Tree*));
+	Tree** t2_sons = (Tree**)malloc(size_X * sizeof(Tree*));
+
+	Tree* tmp = order1->son;
+	int l = 0;
+	while (tmp != NULL) {
+		t1_sons[l] = tmp;
+		tmp = tmp->brother;
+		l++;
+	}
+
+	tmp = order2->son;
+	l = 0;
+	while (tmp != NULL) {
+		t2_sons[l] = tmp;
+		tmp = tmp->brother;
+		l++;
+	}
+
+	int** tmp_arr = (int**)malloc(size_Y * sizeof(int*));
+	int** pom_arr = (int**)malloc(size_Y * sizeof(int*));
+	for (int i = 0; i < size_Y; i++) {
+		tmp_arr[i] = (int*)malloc(size_X * sizeof(int));
+		pom_arr[i] = (int*)malloc(size_X * sizeof(int));
+	}
+
+	for (int i = 0; i < size_Y; i++) {
+		for (int j = 0; j < size_X;j++) {
+			tmp_arr[i][j] = compare(arr, t1_sons[i], t2_sons[j]);
+			pom_arr[i][j] = 0;
+		}
+	}
+
+	//szukanie sumy maksymalnych elementow z danych rzedow/kolumn
+	int max = 0;
+
+	for (int i = 0; i < size_Y; i++) {
+		for (int j = 0; j < size_X; j++) {
+			max += find_max(tmp_arr, size_Y, size_X, pom_arr);
+		}
+	}
+
+
+	int* pom_t1 = (int*)malloc(size_X * sizeof(int));
+	int* pom_t2 = (int*)malloc(size_Y * sizeof(int));
+
+	for (int i = 0; i < size_X; i++) {
+		pom_t1[i] = compare(arr, order1, t2_sons[i]);
+		if (pom_t1[i] > max) {
+			max = pom_t1[i];
+		}
+	}
+
+	for (int i = 0; i < size_Y; i++) {
+		pom_t2[i] = compare(arr, t1_sons[i], order2);
+		if (pom_t2[i] > max) {
+			max = pom_t2[i];
+		}
+	}
+	return max;
+}
+
+//dla kazdej pary drzew sprawdzam pokrywanie sie ich wierzcholkow
+void check_inner(Tree** order1, Tree** order2, int** arr, int size_y, int size_x) {
+	for (int i = size_y - 1; i >= 10; i--) {
+		for (int j = size_x - 1; j >= 10; j--) {
+			arr[i][j] = compare_inner(arr, order1[i - 10], order2[j - 10]);
+		}
 	}
 }
 
@@ -235,30 +400,42 @@ int main() {
 
 			check_hori(arr[comp + j - 1].order, main_arr, size_X);
 
+			int t = count_sons(arr[comp - 1].tree);
+
+			check_inner(arr[comp - 1].order, arr[comp + j - 1].order, main_arr, size_Y, size_X);
+
 			//wyswietlanie tabelki
-			for (int t2 = 0; t2 <= size_Y; t2++) {
+			/*for (int t2 = 0; t2 <= size_Y; t2++) {
 				for (int t1 = 0; t1 <= size_X; t1++) {
 					if (t2 == 0 && t1 == 0) std::cout << std::setw(2) << 0 << ' ';
 					if (t2 == 0 && t1 != 0) std::cout << std::setw(2) << t1 << ' ';
 					if (t1 == 0 && t2 != 0) std::cout << std::setw(2) << t2 << ' ';
-					if (t1 >= 1 && t2 >= 1 /*&& t1 <11 && t2 <11*/) {
+					if (t1 >= 1 && t2 >= 1 ) {
 						std::cout << std::setw(2) << main_arr[t2 - 1][t1 - 1] << ' ';
 					}
 				}
 				std::cout << '\n';
+			}*/
+
+			int max = 0;
+			for (int m = 10; m < size_Y; m++) {
+				for (int n = 10; m < size_X; n++) {
+					if (main_arr[m][n] > max) {
+						max = main_arr[m][n];
+					}
+				}
 			}
+
+			std::cout << max;
+
 			for (int f = 0; f < size_Y; f++) {
 				free(main_arr[f]);
 			}
-			std::cout << comp << '-' << comp + j << '\n';
+			//std::cout << comp << '-' << comp + j << '\n';
 		}
 		comp++;
 	}
 	
-
-
-
-
 	for (int i = 0; i < size; i++) {
 		free(input[i]);
 	}
