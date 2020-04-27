@@ -314,6 +314,105 @@ void zero_arr(int** arr, int size_Y, int size_X) {
 	}
 }
 
+//sprawdza czy tablica zawiera dany numer, 0 - zawiera, 1 - nie zawiera
+int check_for_number(int* arr, int size, int number) {
+	for (int i = 0; i < size; i++) {
+		if (arr[i] == number) {
+			return 0;
+		}
+	}
+	return 1;
+}
+
+//int alt_sum(int** arr, int size_Y, int size_X, int smaller) {
+//	int* pom_x = (int*)malloc(smaller * sizeof(int));
+//	int* pom_y = (int*)malloc(smaller * sizeof(int));
+//	for (int i = 0; i < smaller; i++) {
+//		pom_x[i] = -1;
+//		pom_y[i] = -1;
+//	}
+//
+//	int sum = 0;
+//	int max_sum = 0;
+//	int iterator = 0;
+//	for (int i = 0; i < size_Y; i++) {
+//		for (int l = 0; l < size_X; l++) {
+//
+//			iterator = 0;
+//			max_sum += arr[i][l];
+//			pom_x[iterator] = l;
+//			pom_y[iterator] = i;
+//			iterator++;
+//			for (int j = 0; j < size_Y; j++) {
+//				for (int k = 0; k < size_X; k++) {
+//					if (check_for_number(pom_x, smaller, k) && check_for_number(pom_y, smaller, j) && iterator < smaller && arr[j][k] > 0) {
+//						max_sum += arr[j][k];
+//						pom_x[iterator] = k;
+//						pom_y[iterator] = j;
+//						iterator++;
+//					}
+//				}
+//			}
+//			if (max_sum > sum) sum = max_sum;
+//			max_sum = 0;
+//			for (int p = 0; p < smaller; p++) {
+//				pom_x[p] = -1;
+//				pom_y[p] = -1;
+//			}
+//		}
+//	}
+//	return sum;
+//}
+
+int max_find(int** arr, int** pom, int size_Y, int size_X, int smaller) {
+	int tmp_max = 0;
+	int max = 0;
+	int result = 0;
+	int r_u = 0;
+	int r_d = 0;
+	int l_u = 0;
+	int l_d = 0;
+	for (int i = 0; i < size_Y; i++) {
+		for (int j = 0; j < size_X; j++) {
+			tmp_max = arr[i][j];
+			exclude_column(pom, j, size_Y);
+			exclude_row(pom, i, size_X);
+
+			for (int k = 0; k < smaller - 1; k++) {
+				l_u += find_max(arr, size_Y, size_X, pom);
+			}
+			if (l_u > max) max = l_u;
+
+			for (int k = 0; k < smaller - 1; k++) {
+				l_d += find_max_left(arr, size_Y, size_X, pom);
+			}
+			if (l_d > max) max = l_d;
+
+			for (int k = 0; k < smaller - 1; k++) {
+				r_u += find_max(arr, size_Y, size_X, pom);
+			}
+			if (r_u > max) max = r_u;
+
+			for (int k = 0; k < smaller - 1; k++) {
+				r_d += find_max(arr, size_Y, size_X, pom);
+			}
+			if (r_d > max) max = r_d;
+			
+			tmp_max += max;
+			if (tmp_max > result) result = tmp_max;
+			tmp_max = 0;
+			max = 0;
+			zero_arr(pom, size_Y, size_X);
+			r_u = 0;
+			r_d = 0;
+			l_u = 0;
+			l_d = 0;
+		}
+	}
+
+	return result;
+}
+
 int compare_inner(int** arr, Tree* order1, Tree* order2) {
 	int size_Y = count_sons(order1);
 	int size_X = count_sons(order2);
@@ -356,7 +455,13 @@ int compare_inner(int** arr, Tree* order1, Tree* order2) {
 	int max = 0;
 	int smaller = (size_X < size_Y) ? size_X : size_Y;
 
-	for (int i = 0; i < smaller; i++) {
+	int bigger = (size_X > size_Y) ? size_X : size_Y;
+
+	/*max = alt_sum(tmp_arr, size_Y, size_X, smaller);*/
+
+	max = max_find(tmp_arr, pom_arr, size_Y, size_X, smaller);
+
+	/*for (int i = 0; i < smaller; i++) {
 		max += find_max(tmp_arr, size_Y, size_X, pom_arr);
 	}
 
@@ -385,7 +490,7 @@ int compare_inner(int** arr, Tree* order1, Tree* order2) {
 		max_left += find_max_left(tmp_arr, size_Y, size_X, pom_arr);
 	}
 
-	if (max_left > max) max = max_left;
+	if (max_left > max) max = max_left;*/
 
 	int* pom_t1 = (int*)malloc(size_X * sizeof(int));
 	int* pom_t2 = (int*)malloc(size_Y * sizeof(int));
