@@ -10,15 +10,15 @@
 
 #define LEAVES 10
 
-struct Tree {
-	int id;					//mala wartosc do samego zapisywania numeru wierzcholka, w kolejnosci dodawania
+typedef struct Tree {
+	int id;						//mala wartosc do samego zapisywania numeru wierzcholka, w kolejnosci dodawania
 	int value;					//jesli dany wierzcholek jest lisciem, to tu jest jego wartosc, jesli nie jest lisciem, to jest to NULL
 	Tree* parent;				
 	Tree* son;
 	Tree* brother;
 };
 
-struct Root {
+typedef struct Root {
 	Tree* tree;					//zwykly korzen, ktory bedzie zaczynal drzewo
 	Tree** order;				//tablica, ktora bedzie przetrzymywala wezly i liscie w kolejnosci dodania
 	int internal_vert;			//zmienna przechowujaca ilosc wierzcholkow wewnetrznych
@@ -74,9 +74,8 @@ Tree* read_NEWICK(std::string input, int& internal_vertices, Tree**& order) {
 			tmp = tmp->parent;
 		}
 		else {
-			//liczba dwucyfrowa
-			if (input[i] == '1' && input[i + 1] >= 48 && input[i + 1] < 58) {
-				tmp->value = 10 + input[i + 1] - 48;
+			if (input[i] > 48 && input[i] < 58 && input[i + 1] >= 48 && input[i + 1] < 58) {
+				tmp->value = (input[i] - 48) * 10 + input[i + 1] - 48;
 				i++;
 			}
 			else {
@@ -87,6 +86,24 @@ Tree* read_NEWICK(std::string input, int& internal_vertices, Tree**& order) {
 	} while (input[i] != ';');
 
 	return tmp;
+}
+
+int count_leaves(std::string input) {
+	int counter = 0;
+	int i = 0;
+	do {
+
+		if (input[i] > 48 && input[i] < 58 && input[i + 1] >= 48 && input[i + 1] < 58) {
+			counter++;
+			i++;
+		}
+		else if (input[i] > 48 && input[i] < 58) {
+			counter++;
+		}
+
+		i++;
+	} while (input[i] != ';');
+	return counter;
 }
 
 int** alloc_table(int columns, int rows) {
@@ -249,63 +266,6 @@ int find_max(int** arr, int size_Y, int size_X, int** pom) {
 	return max;
 }
 
-int find_max_rev(int** arr, int size_Y, int size_X, int** pom) {
-	int max = 0;
-	int max_x = 0;
-	int max_y = 0;
-	for (int i = size_Y-1; i >=0; i--) {
-		for (int j = size_X - 1; j >= 0;j--) {
-			if (arr[i][j] > max && !pom[i][j]) {
-				max = arr[i][j];
-				max_y = i;
-				max_x = j;
-			}
-		}
-	}
-
-	exclude_column(pom, max_x, size_Y);
-	exclude_row(pom, max_y, size_X);
-	return max;
-}
-
-int find_max_right(int** arr, int size_Y, int size_X, int** pom) {
-	int max = 0;
-	int max_x = 0;
-	int max_y = 0;
-	for (int i = 0; i < size_Y; i++) {
-		for (int j = size_X - 1; j >= 0; j--) {
-			if (arr[i][j] > max && !pom[i][j]) {
-				max = arr[i][j];
-				max_y = i;
-				max_x = j;
-			}
-		}
-	}
-
-	exclude_column(pom, max_x, size_Y);
-	exclude_row(pom, max_y, size_X);
-	return max;
-}
-
-int find_max_left(int** arr, int size_Y, int size_X, int** pom) {
-	int max = 0;
-	int max_x = 0;
-	int max_y = 0;
-	for (int i = size_Y - 1; i >= 0; i--) {
-		for (int j = 0 ; j <size_X; j++) {
-			if (arr[i][j] > max && !pom[i][j]) {
-				max = arr[i][j];
-				max_y = i;
-				max_x = j;
-			}
-		}
-	}
-
-	exclude_column(pom, max_x, size_Y);
-	exclude_row(pom, max_y, size_X);
-	return max;
-}
-
 void zero_arr(int** arr, int size_Y, int size_X) {
 	for (int i = 0; i < size_Y; i++) {
 		for (int j = 0; j < size_X; j++) {
@@ -314,64 +274,12 @@ void zero_arr(int** arr, int size_Y, int size_X) {
 	}
 }
 
-//sprawdza czy tablica zawiera dany numer, 0 - zawiera, 1 - nie zawiera
-int check_for_number(int* arr, int size, int number) {
-	for (int i = 0; i < size; i++) {
-		if (arr[i] == number) {
-			return 0;
-		}
-	}
-	return 1;
-}
-
-//int alt_sum(int** arr, int size_Y, int size_X, int smaller) {
-//	int* pom_x = (int*)malloc(smaller * sizeof(int));
-//	int* pom_y = (int*)malloc(smaller * sizeof(int));
-//	for (int i = 0; i < smaller; i++) {
-//		pom_x[i] = -1;
-//		pom_y[i] = -1;
-//	}
-//
-//	int sum = 0;
-//	int max_sum = 0;
-//	int iterator = 0;
-//	for (int i = 0; i < size_Y; i++) {
-//		for (int l = 0; l < size_X; l++) {
-//
-//			iterator = 0;
-//			max_sum += arr[i][l];
-//			pom_x[iterator] = l;
-//			pom_y[iterator] = i;
-//			iterator++;
-//			for (int j = 0; j < size_Y; j++) {
-//				for (int k = 0; k < size_X; k++) {
-//					if (check_for_number(pom_x, smaller, k) && check_for_number(pom_y, smaller, j) && iterator < smaller && arr[j][k] > 0) {
-//						max_sum += arr[j][k];
-//						pom_x[iterator] = k;
-//						pom_y[iterator] = j;
-//						iterator++;
-//					}
-//				}
-//			}
-//			if (max_sum > sum) sum = max_sum;
-//			max_sum = 0;
-//			for (int p = 0; p < smaller; p++) {
-//				pom_x[p] = -1;
-//				pom_y[p] = -1;
-//			}
-//		}
-//	}
-//	return sum;
-//}
 
 int max_find(int** arr, int** pom, int size_Y, int size_X, int smaller) {
 	int tmp_max = 0;
 	int max = 0;
 	int result = 0;
-	int r_u = 0;
-	int r_d = 0;
-	int l_u = 0;
-	int l_d = 0;
+	int tmp = 0;
 	for (int i = 0; i < size_Y; i++) {
 		for (int j = 0; j < size_X; j++) {
 			tmp_max = arr[i][j];
@@ -379,34 +287,16 @@ int max_find(int** arr, int** pom, int size_Y, int size_X, int smaller) {
 			exclude_row(pom, i, size_X);
 
 			for (int k = 0; k < smaller - 1; k++) {
-				l_u += find_max(arr, size_Y, size_X, pom);
+				tmp += find_max(arr, size_Y, size_X, pom);
 			}
-			if (l_u > max) max = l_u;
-
-			for (int k = 0; k < smaller - 1; k++) {
-				l_d += find_max_left(arr, size_Y, size_X, pom);
-			}
-			if (l_d > max) max = l_d;
-
-			for (int k = 0; k < smaller - 1; k++) {
-				r_u += find_max(arr, size_Y, size_X, pom);
-			}
-			if (r_u > max) max = r_u;
-
-			for (int k = 0; k < smaller - 1; k++) {
-				r_d += find_max(arr, size_Y, size_X, pom);
-			}
-			if (r_d > max) max = r_d;
+			if (tmp > max) max = tmp;
 			
 			tmp_max += max;
 			if (tmp_max > result) result = tmp_max;
 			tmp_max = 0;
 			max = 0;
 			zero_arr(pom, size_Y, size_X);
-			r_u = 0;
-			r_d = 0;
-			l_u = 0;
-			l_d = 0;
+			tmp = 0;
 		}
 	}
 
@@ -455,42 +345,7 @@ int compare_inner(int** arr, Tree* order1, Tree* order2) {
 	int max = 0;
 	int smaller = (size_X < size_Y) ? size_X : size_Y;
 
-	int bigger = (size_X > size_Y) ? size_X : size_Y;
-
-	/*max = alt_sum(tmp_arr, size_Y, size_X, smaller);*/
-
 	max = max_find(tmp_arr, pom_arr, size_Y, size_X, smaller);
-
-	/*for (int i = 0; i < smaller; i++) {
-		max += find_max(tmp_arr, size_Y, size_X, pom_arr);
-	}
-
-	int max_rev = 0;
-	zero_arr(pom_arr, size_Y, size_X);
-
-	for (int i = 0; i < smaller; i++) {
-		max_rev += find_max_rev(tmp_arr, size_Y, size_X, pom_arr);
-	}
-
-	if (max_rev > max) max = max_rev;
-
-	zero_arr(pom_arr, size_Y, size_X);
-
-	int max_right = 0;
-	for (int i = 0; i < smaller; i++) {
-		max_right += find_max_right(tmp_arr, size_Y, size_X, pom_arr);
-	}
-
-	if (max_right > max) max = max_right;
-
-	zero_arr(pom_arr, size_Y, size_X);
-
-	int max_left = 0;
-	for (int i = 0; i < smaller; i++) {
-		max_left += find_max_left(tmp_arr, size_Y, size_X, pom_arr);
-	}
-
-	if (max_left > max) max = max_left;*/
 
 	int* pom_t1 = (int*)malloc(size_X * sizeof(int));
 	int* pom_t2 = (int*)malloc(size_Y * sizeof(int));
@@ -552,6 +407,7 @@ int main() {
 	int comp = 1;
 	for (int i = 0; comp < size; i++) {
 		for (int j = 1; j + comp <= size; j++) {
+
 			//w tym miejscu comp i comp+j maja odpowiednie wartosci, zeby je zaczac ze soba porownywac
 			int size_Y = arr[comp - 1].internal_vert + 10;
 			int size_X = arr[comp + j - 1].internal_vert + 10;
@@ -566,7 +422,7 @@ int main() {
 			check_inner(arr[comp - 1].order, arr[comp + j - 1].order, main_arr, size_Y, size_X);
 
 			//wyswietlanie tabelki
-			/*for (int t2 = 0; t2 <= size_Y; t2++) {
+			for (int t2 = 0; t2 <= size_Y; t2++) {
 				for (int t1 = 0; t1 <= size_X; t1++) {
 					if (t2 == 0 && t1 == 0) std::cout << std::setw(2) << 0 << ' ';
 					if (t2 == 0 && t1 != 0) std::cout << std::setw(2) << t1 << ' ';
@@ -576,7 +432,7 @@ int main() {
 					}
 				}
 				std::cout << '\n';
-			}*/
+			}
 
 			int max = 0;
 			for (int t2 = 10; t2 <= size_Y; t2++) {
@@ -592,11 +448,11 @@ int main() {
 			for (int f = 0; f < size_Y; f++) {
 				free(main_arr[f]);
 			}
-			/*std::cout << comp << '-' << comp + j << '\n';*/
 			free(main_arr);
 		}
 		comp++;
 	}
-	
+
+	delete[] in;
 	return 0;
 }
