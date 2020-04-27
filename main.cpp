@@ -2,6 +2,8 @@
 
 #include <iostream>
 #include <stdio.h>
+#include <string>
+#include <string.h>
 
 //tylko na potrzeby prezentacji tabelki - do usuniecia
 #include <iomanip>
@@ -42,7 +44,7 @@ Tree* alloc() {
 	return (Tree*)malloc(sizeof(Tree));
 }
 
-Tree* read_NEWICK(char* input, int& internal_vertices, Tree** &order) {
+Tree* read_NEWICK(std::string input, int& internal_vertices, Tree**& order) {
 	Tree* tmp = alloc();
 	init_Tree(tmp);
 	order = (Tree**)malloc(sizeof(Tree*));
@@ -56,7 +58,7 @@ Tree* read_NEWICK(char* input, int& internal_vertices, Tree** &order) {
 			init_Tree(tmp->son);
 			order[internal_vertices - 1] = tmp;
 			tmp->id = 10 + internal_vertices;
-			if (Tree** real = (Tree**)realloc(order, (internal_vertices + 1)* sizeof(Tree*))) {
+			if (Tree** real = (Tree**)realloc(order, (internal_vertices + 1) * sizeof(Tree*))) {
 				order = real;
 			}
 			tmp->son->parent = tmp;
@@ -76,14 +78,14 @@ Tree* read_NEWICK(char* input, int& internal_vertices, Tree** &order) {
 			if (input[i] == '1' && input[i + 1] >= 48 && input[i + 1] < 58) {
 				tmp->value = 10 + input[i + 1] - 48;
 				i++;
-			} 
+			}
 			else {
 				tmp->value = input[i] - 48;
 			}
 		}
 		i++;
 	} while (input[i] != ';');
-	
+
 	return tmp;
 }
 
@@ -247,6 +249,71 @@ int find_max(int** arr, int size_Y, int size_X, int** pom) {
 	return max;
 }
 
+int find_max_rev(int** arr, int size_Y, int size_X, int** pom) {
+	int max = 0;
+	int max_x = 0;
+	int max_y = 0;
+	for (int i = size_Y-1; i >=0; i--) {
+		for (int j = size_X - 1; j >= 0;j--) {
+			if (arr[i][j] > max && !pom[i][j]) {
+				max = arr[i][j];
+				max_y = i;
+				max_x = j;
+			}
+		}
+	}
+
+	exclude_column(pom, max_x, size_Y);
+	exclude_row(pom, max_y, size_X);
+	return max;
+}
+
+int find_max_right(int** arr, int size_Y, int size_X, int** pom) {
+	int max = 0;
+	int max_x = 0;
+	int max_y = 0;
+	for (int i = 0; i < size_Y; i++) {
+		for (int j = size_X - 1; j >= 0; j--) {
+			if (arr[i][j] > max && !pom[i][j]) {
+				max = arr[i][j];
+				max_y = i;
+				max_x = j;
+			}
+		}
+	}
+
+	exclude_column(pom, max_x, size_Y);
+	exclude_row(pom, max_y, size_X);
+	return max;
+}
+
+int find_max_left(int** arr, int size_Y, int size_X, int** pom) {
+	int max = 0;
+	int max_x = 0;
+	int max_y = 0;
+	for (int i = size_Y - 1; i >= 0; i--) {
+		for (int j = 0 ; j <size_X; j++) {
+			if (arr[i][j] > max && !pom[i][j]) {
+				max = arr[i][j];
+				max_y = i;
+				max_x = j;
+			}
+		}
+	}
+
+	exclude_column(pom, max_x, size_Y);
+	exclude_row(pom, max_y, size_X);
+	return max;
+}
+
+void zero_arr(int** arr, int size_Y, int size_X) {
+	for (int i = 0; i < size_Y; i++) {
+		for (int j = 0; j < size_X; j++) {
+			arr[i][j] = 0;
+		}
+	}
+}
+
 int compare_inner(int** arr, Tree* order1, Tree* order2) {
 	int size_Y = count_sons(order1);
 	int size_X = count_sons(order2);
@@ -293,6 +360,32 @@ int compare_inner(int** arr, Tree* order1, Tree* order2) {
 		max += find_max(tmp_arr, size_Y, size_X, pom_arr);
 	}
 
+	int max_rev = 0;
+	zero_arr(pom_arr, size_Y, size_X);
+
+	for (int i = 0; i < smaller; i++) {
+		max_rev += find_max_rev(tmp_arr, size_Y, size_X, pom_arr);
+	}
+
+	if (max_rev > max) max = max_rev;
+
+	zero_arr(pom_arr, size_Y, size_X);
+
+	int max_right = 0;
+	for (int i = 0; i < smaller; i++) {
+		max_right += find_max_right(tmp_arr, size_Y, size_X, pom_arr);
+	}
+
+	if (max_right > max) max = max_right;
+
+	zero_arr(pom_arr, size_Y, size_X);
+
+	int max_left = 0;
+	for (int i = 0; i < smaller; i++) {
+		max_left += find_max_left(tmp_arr, size_Y, size_X, pom_arr);
+	}
+
+	if (max_left > max) max = max_left;
 
 	int* pom_t1 = (int*)malloc(size_X * sizeof(int));
 	int* pom_t2 = (int*)malloc(size_Y * sizeof(int));
@@ -338,42 +431,17 @@ int main() {
 	scanf("%d", &size);
 
 	Root* arr = (Root*)malloc(size * sizeof(Root));
-	char** input = (char**)malloc(size * sizeof(char*));
-	int x = 0;
-	int blank = getchar();
-	do
-	{
-		int arr_size = 1;
-		input[x] = (char*)malloc(arr_size*sizeof(char));
+	std::string* in = new std::string[size];
 
-		if (input[x] != NULL)
-		{
-			char q;
-			int j = 0;
-			while ((q = getchar()) != '\n')
-			{
-				input[x][j++] = q;
-				if (j == arr_size)
-				{
-					arr_size += j;
-					if (char* tmp = (char*)realloc(input[x], arr_size*sizeof(char)))
-					{
-						input[x] = tmp;
-					}
-				}
-			}
-			input[x][j] = '\0';
-			x++;
-		}
-	} while (x < size);
+	for (int u = 0; u < size; u++) {
+		std::cin >> in[u];
+	}
 
 	for (int i = 0; i < size; i++) {
 		arr[i].tree = alloc();
 		init_Root(&arr[i]);
-		arr[i].tree = read_NEWICK(input[i], arr[i].internal_vert, arr[i].order);
-		free(input[i]);
+		arr[i].tree = read_NEWICK(in[i], arr[i].internal_vert, arr[i].order);
 	}
-	free(input);
 
 	//petla robiaca porownanie kazdy z kazdym
 	int comp = 1;
